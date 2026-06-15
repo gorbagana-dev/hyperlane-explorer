@@ -9,6 +9,7 @@ import { objFilter, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
 
 import { links } from '../../consts/links';
 import { logger } from '../../utils/logger';
+import { loadInjectedChainMetadata } from './injectedChainMetadata';
 
 export async function loadChainMetadata(
   registry: IRegistry,
@@ -33,7 +34,12 @@ export async function loadChainMetadata(
     ),
   );
 
-  const mergedMetadata = mergeChainMetadataMap(metadataWithLogos, overrideChainMetadata);
+  // Self-hosted gorbagana chains (gorchain + solana) shipped in /public so the
+  // UI resolves them without the public Hyperlane registry. User overrides
+  // (added via the UI) still win over these.
+  const injectedMetadata = await loadInjectedChainMetadata();
+  const withInjected = mergeChainMetadataMap(metadataWithLogos, injectedMetadata);
+  const mergedMetadata = mergeChainMetadataMap(withInjected, overrideChainMetadata);
 
   return objFilter(
     objMap(mergedMetadata, (chain, metadata) => {
