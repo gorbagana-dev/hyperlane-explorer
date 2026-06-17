@@ -52,9 +52,10 @@ export function useMessageSearchQuery(
   const { scrapedDomains: scrapedChains } = useScrapedDomains();
   const chainMetadataResolver = useChainMetadataResolver();
   const { chains } = useScrapedChains(chainMetadataResolver);
-  const mainnetDomainIds = Object.values(chains)
-    .filter((chain) => !chain.isTestnet)
-    .map((chain) => chain.domainId);
+  // Default feed (no search/filters) lists messages whose origin AND destination
+  // are scraped chains. Upstream restricts this to non-testnet chains; our
+  // gorbagana chains are testnet, so include every scraped chain instead.
+  const feedDomainIds = Object.values(chains).map((chain) => chain.domainId);
 
   const hasInput = !!sanitizedInput;
   const isValidInput = !hasInput || isValidSearchQuery(sanitizedInput);
@@ -119,7 +120,7 @@ export function useMessageSearchQuery(
     endTimeFilter,
     queryLimit,
     true,
-    mainnetDomainIds,
+    feedDomainIds,
     dbStatusFilter,
     warpAddresses,
     isPendingFilter,
