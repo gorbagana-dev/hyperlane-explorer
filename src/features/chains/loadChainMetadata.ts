@@ -38,7 +38,24 @@ export async function loadChainMetadata(
   // UI resolves them without the public Hyperlane registry. User overrides
   // (added via the UI) still win over these.
   const injectedMetadata = await loadInjectedChainMetadata();
-  const withInjected = mergeChainMetadataMap(metadataWithLogos, injectedMetadata);
+
+  // A self-hosted chain can reuse a public domainId under a different name (e.g.
+  // injected 'solana' and registry 'solanadevnet' both at domainId 1399811151).
+  // The SDK chain-metadata resolver rejects two chains sharing a domainId but not
+  // a name, so drop the colliding registry entries — the injected chain is
+  // authoritative for its domainId.
+  const injectedDomainIds = new Set(
+    Object.values(injectedMetadata)
+      .map((metadata) => metadata.domainId)
+      .filter((domainId): domainId is number => domainId != null),
+  );
+  const dedupedRegistryMetadata = objFilter(
+    metadataWithLogos,
+    (chainName, metadata): metadata is ChainMetadata =>
+      !(injectedDomainIds.has(metadata.domainId) && !(chainName in injectedMetadata)),
+  );
+
+  const withInjected = mergeChainMetadataMap(dedupedRegistryMetadata, injectedMetadata);
   const mergedMetadata = mergeChainMetadataMap(withInjected, overrideChainMetadata);
 
   return objFilter(
