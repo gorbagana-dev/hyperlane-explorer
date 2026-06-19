@@ -18,6 +18,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { config } from './consts/config';
+import { loadInjectedWarpRoutes, mergeInjectedWarpRoutes } from './features/chains/injectedWarpRoutes';
 import { DomainsEntry } from './features/chains/queries/fragments';
 import { clearPrefetchedMessages } from './features/messages/queries/prefetch';
 import { logger } from './utils/logger';
@@ -241,7 +242,11 @@ async function loadWarpRouteData(registry: IRegistry): Promise<{
     warpRouteConfigs = publishedWarpRouteConfigs;
   }
 
-  return buildWarpRouteMaps(warpRouteConfigs);
+  // Merge the self-hosted gorbagana routes (served from /public) over the registry
+  // routes — the registry doesn't publish them, so this is what populates the warp
+  // data for our chains.
+  const injectedWarpRouteConfigs = await loadInjectedWarpRoutes();
+  return buildWarpRouteMaps(mergeInjectedWarpRoutes(warpRouteConfigs, injectedWarpRouteConfigs));
 }
 
 function canUsePublishedWarpRouteFallback(registry: IRegistry) {
